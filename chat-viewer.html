@@ -297,22 +297,45 @@
         }
 
         const messagesHtml = chat.messages.map(msg => {
-          const html = marked.parse(msg.content);
+          let content = msg.content;
+
+          // === Проверяем: это чистая ссылка на изображение Qwen? ===
+          const qwenImageUrlRegex = /^https?:\/\/cdn\.qwenlm\.ai\/output\/.*\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i;
+          if (qwenImageUrlRegex.test(content.trim())) {
+            // Это чистая ссылка на изображение → рендерим как <img>
+            const html = `<img src="${content.trim()}" alt="Изображение Qwen" style="max-width:50%; height:auto; border-radius:6px; margin:8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
+            return `
+        <div class="message ${msg.role === 'user' ? 'user' : 'assistant'}">
+          <div class="role-label">${msg.role === 'user' ? '👤 Вы' : '🤖 Qwen'}</div>
+          ${html}
+        </div>
+      `;
+          }
+
+          // === Иначе: обрабатываем как Markdown ===
+          let html = marked.parse(content);
+
+          // === Дополнительно: ищем ссылки на изображения внутри текста ===
+          const inlineImageRegex = /(?:^|\s)(https?:\/\/cdn\.qwenlm\.ai\/output\/[^\s<>"']+?\.(?:png|jpg|jpeg|gif|webp)(?:\?[^"\s<>]*)?)(?=\s|$|<|["'])/gi;
+          html = html.replace(inlineImageRegex, (match, url) => {
+            const prefix = match.startsWith(' ') ? ' ' : '';
+            return `${prefix}<img src="${url}" alt="Изображение Qwen" style="max-width:50%; height:auto; border-radius:6px; margin:8px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
+          });
+
           return `
-          <div class="message ${msg.role === 'user' ? 'user' : 'assistant'}">
-            <div class="role-label">${msg.role === 'user' ? '👤 You' : '🤖 Qwen'}</div>
-            ${html}
-          </div>
-        `;
+      <div class="message ${msg.role === 'user' ? 'user' : 'assistant'}">
+        <div class="role-label">${msg.role === 'user' ? '👤 Вы' : '🤖 Qwen'}</div>
+        ${html}
+      </div>
+    `;
         }).join('');
 
         container.innerHTML = messagesHtml;
 
-        // Принудительно подсветить все блоки кода (на случай, если Marked не сработал)
+        // Подсветка кода
         document.querySelectorAll('pre code').forEach(block => {
-          if (block.className && !block.dataset.highlighted) {
-            const cls = block.className;
-            const lang = cls.replace('language-', '');
+          if (!block.dataset.highlighted) {
+            const lang = block.className.replace('language-', '');
             if (hljs.getLanguage(lang)) {
               const highlighted = hljs.highlight(block.textContent, { language: lang }).value;
               block.innerHTML = highlighted;
