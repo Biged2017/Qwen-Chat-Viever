@@ -40,3 +40,7 @@ cd /путь/к/вашей/папке
 
 # Запустите сервер
 python -m http.server 8000
+
+# Откройте страницу в браузере
+http://localhost:8000/chat-viewer.html
+
