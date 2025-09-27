@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qwen Chat Viewer</title>
+
+  <!-- Highlight.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github.min.css">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #sidebar {
+      width: 320px;
+      background: white;
+      border-right: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #search {
+      padding: 12px 16px;
+      border: none;
+      background: #f8f9fa;
+      font-size: 14px;
+      outline: none;
+      border-bottom: 1px solid #eee;
+    }
+
+    #chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .chat-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+    }
+
+    .chat-item:hover {
+      background: #f8f9fa;
+    }
+
+    .chat-item.active {
+      background: #e8f0fe;
+      border-left: 3px solid #1a73e8;
+    }
+
+    .chat-title {
+      font-weight: 600;
+      color: #202124;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-date {
+      font-size: 12px;
+      color: #5f6368;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .user {
+      background: #e8f0fe;
+      align-self: flex-end;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+
+    .assistant {
+      background: #f1f8e9;
+      align-self: flex-start;
+      margin-right: auto;
+      border-bottom-left-radius: 4px;
+    }
+
+    .role-label {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #5f6368;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* Стили Markdown */
+    .message h1,
+    .message h2,
+    .message h3,
+    .message h4,
+    .message h5,
+    .message h6 {
+      margin: 16px 0 12px;
+      font-weight: 600;
+    }
+
+    .message p {
+      margin: 8px 0 12px;
+    }
+
+    .message ul,
+    .message ol {
+      padding-left: 20px;
+      margin: 8px 0 12px;
+    }
+
+    .message li {
+      margin: 4px 0;
+    }
+
+    .message blockquote {
+      margin: 12px 0;
+      padding-left: 16px;
+      border-left: 3px solid #ddd;
+      color: #666;
+    }
+
+    .message a {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+
+    .message a:hover {
+      text-decoration: underline;
+    }
+
+    .message hr {
+      border: 0;
+      border-top: 1px solid #eee;
+      margin: 16px 0;
+    }
+
+    /* Код уже стилизован через highlight.js */
+  </style>
+</head>
+
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/sql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/delphi.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/javascript.min.js"></script>
+  <!-- Marked.js -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <div id="sidebar">
+    <input type="text" id="search" placeholder="Поиск по чатам..." />
+    <div id="chat-list">
+      <div style="padding:16px;color:#1a73e8;">Загрузка чатов...</div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="chat-container">
+      <div id="empty-state">
+        <h2>💬 Qwen Chat Viewer</h2>
+        <p>Выберите чат из списка слеваC</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === ЖДЕМ ЗАГРУЗКИ БИБЛИОТЕК ===
+    function waitForLibraries() {
+      if (typeof hljs === 'undefined' || typeof marked === 'undefined') {
+        console.log('⏳ Ожидание загрузки библиотек...');
+        setTimeout(waitForLibraries, 100);
+        return;
+      }
+
+      console.log('✅ Библиотеки загружены:', { hljs: typeof hljs, marked: typeof marked });
+
+      // === НАСТРОЙКА MARKED + HIGHLIGHT ===
+      marked.setOptions({
+        highlight: function (code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+          }
+          return hljs.highlight(code, { language: 'plaintext' }).value;
+        },
+        langPrefix: 'language-',
+        breaks: true,
+        gfm: true
+      });
+
+      let allChats = [];
+
+      function getTimestamp(chat) {
+        return chat.created_at || chat.timestamp || chat.updated_at || 0;
+      }
+
+      function formatDate(timestamp) {
+        if (!timestamp) return '';
+        const d = new Date(typeof timestamp === 'string' ? Date.parse(timestamp) : timestamp * 1000);
+        return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+
+      function extractMessages(chatObj) {
+        const messagesDict = chatObj?.chat?.history?.messages || {};
+        const messages = Object.values(messagesDict);
+        return messages.map(msg => {
+          let content = msg.content || '';
+          if (!content && msg.content_list?.[0]?.content) {
+            content = msg.content_list[0].content;
+          }
+          return {
+            role: msg.role || 'unknown',
+            content: content
+          };
+        }).filter(m => m.content.trim());
+      }
+
+      function renderChatList(filter = '') {
+        const listEl = document.getElementById('chat-list');
+        const filtered = allChats.filter(chat =>
+          chat.title.toLowerCase().includes(filter.toLowerCase()) ||
+          chat.messages.some(m => m.content.toLowerCase().includes(filter.toLowerCase()))
+        ).sort((a, b) => b.date - a.date);
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = '<div style="padding:16px;color:#999;">Ничего не найдено</div>';
+          return;
+        }
+
+        listEl.innerHTML = filtered.map(chat => `
+        <div class="chat-item" data-id="${chat.id}" title="ID: ${chat.id}">
+          <div class="chat-title">${chat.title}</div>
+          <div class="chat-date">${formatDate(chat.date)}</div>
+        </div>
+      `).join('');
+
+        listEl.querySelectorAll('.chat-item').forEach(item => {
+          item.addEventListener('click', () => {
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+            item.classList.add('active');
+            const chatId = item.getAttribute('data-id');
+            renderChat(chatId);
+          });
+        });
+      }
+
+      function renderChat(chatId) {
+        const chat = allChats.find(c => c.id === chatId);
+        const container = document.getElementById('chat-container');
+        if (!chat) {
+          container.innerHTML = '<div id="empty-state">Чат не найден</div>';
+          return;
+        }
+
+        const messagesHtml = chat.messages.map(msg => {
+          const html = marked.parse(msg.content);
+          return `
+          <div class="message ${msg.role === 'user' ? 'user' : 'assistant'}">
+            <div class="role-label">${msg.role === 'user' ? '👤 You' : '🤖 Qwen'}</div>
+            ${html}
+          </div>
+        `;
+        }).join('');
+
+        container.innerHTML = messagesHtml;
+
+        // Принудительно подсветить все блоки кода (на случай, если Marked не сработал)
+        document.querySelectorAll('pre code').forEach(block => {
+          if (block.className && !block.dataset.highlighted) {
+            const cls = block.className;
+            const lang = cls.replace('language-', '');
+            if (hljs.getLanguage(lang)) {
+              const highlighted = hljs.highlight(block.textContent, { language: lang }).value;
+              block.innerHTML = highlighted;
+              block.dataset.highlighted = 'yes';
+            }
+          }
+        });
+      }
+
+      async function loadChats() {
+        try {
+          const response = await fetch('chat-export.json');
+          if (!response.ok) throw new Error('Файл chat-export.json не найден');
+          const result = await response.json();
+          const rawData = Array.isArray(result) ? result : (result.data || []);
+
+          allChats = rawData.map((chat, index) => ({
+            id: chat.id || `chat_${index}`,
+            title: chat.title || 'Без названия',
+            date: getTimestamp(chat),
+            messages: extractMessages(chat)
+          }));
+
+          renderChatList();
+        } catch (err) {
+          document.getElementById('chat-list').innerHTML =
+            `<div style="padding:16px;color:red;">Ошибка: ${err.message}</div>`;
+          console.error(err);
+        }
+      }
+
+      // Запуск
+      loadChats();
+      document.getElementById('search').addEventListener('input', e => {
+        renderChatList(e.target.value);
+      });
+    }
+
+    // Запускаем проверку
+    waitForLibraries();
+  </script>
+</body>
+
+</html>
