@@ -85,6 +85,21 @@
       overflow: hidden;
     }
 
+    #header {
+      padding: 12px 24px;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #chat-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #202124;
+    }
+
     #chat-container {
       flex: 1;
       overflow-y: auto;
@@ -98,6 +113,7 @@
       border-radius: 12px;
       line-height: 1.5;
       word-wrap: break-word;
+      position: relative;
     }
 
     .user {
@@ -119,6 +135,28 @@
       opacity: 0.7;
       margin-bottom: 4px;
       font-weight: 600;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .message:hover .copy-btn {
+      opacity: 1;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 1);
     }
 
     #empty-state {
@@ -192,6 +230,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/javascript.min.js"></script>
   <!-- Marked.js -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
   <div id="sidebar">
     <input type="text" id="search" placeholder="Поиск по чатам..." />
     <div id="chat-list">
@@ -200,6 +239,9 @@
   </div>
 
   <div id="main">
+    <div id="header">
+      <div id="chat-title">Выберите чат</div>
+    </div>
     <div id="chat-container">
       <div id="empty-state">
         <h2>💬 Qwen Chat Viewer</h2>
@@ -293,8 +335,12 @@
         const container = document.getElementById('chat-container');
         if (!chat) {
           container.innerHTML = '<div id="empty-state">Чат не найден</div>';
+          document.getElementById('chat-title').textContent = 'Выберите чат';
           return;
         }
+
+        // Обновляем заголовок
+        document.getElementById('chat-title').textContent = chat.title;
 
         const messagesHtml = chat.messages.map(msg => {
           let content = msg.content;
@@ -308,6 +354,7 @@
         <div class="message ${msg.role === 'user' ? 'user' : 'assistant'}">
           <div class="role-label">${msg.role === 'user' ? '👤 Вы' : '🤖 Qwen'}</div>
           ${html}
+          ${msg.role === 'assistant' ? '<button class="copy-btn" onclick="copyText(this)">📋</button>' : ''}
         </div>
       `;
           }
@@ -326,6 +373,7 @@
       <div class="message ${msg.role === 'user' ? 'user' : 'assistant'}">
         <div class="role-label">${msg.role === 'user' ? '👤 Вы' : '🤖 Qwen'}</div>
         ${html}
+        ${msg.role === 'assistant' ? '<button class="copy-btn" onclick="copyText(this)">📋</button>' : ''}
       </div>
     `;
         }).join('');
@@ -343,6 +391,31 @@
             }
           }
         });
+      }
+
+      // Функция копирования текста (глобальная для доступа в onclick)
+      window.copyText = function(button) {
+        // Находим родительский элемент сообщения
+        const messageDiv = button.closest('.message');
+        // Извлекаем текстовое содержимое (без кнопки)
+        const textToCopy = messageDiv.textContent
+          .replace('📋', '')  // Убираем символ кнопки
+          .replace(/👤 Вы|🤖 Qwen/, '')  // Убираем роли
+          .trim();
+
+        navigator.clipboard.writeText(textToCopy)
+          .then(() => {
+            // Визуальная индикация копирования
+            const originalText = button.textContent;
+            button.textContent = '✓';
+            setTimeout(() => {
+              button.textContent = originalText;
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('Ошибка копирования: ', err);
+            alert('Не удалось скопировать текст');
+          });
       }
 
       async function loadChats() {
