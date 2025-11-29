@@ -94,7 +94,7 @@
       align-items: center;
     }
 
-    #chat-title {
+    #header-chat-title {
       font-size: 18px;
       font-weight: 600;
       color: #202124;
@@ -218,6 +218,98 @@
     }
 
     /* Код уже стилизован через highlight.js */
+
+    /* Тёмная тема */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #1a1a1a;
+        color: #e0e0e0;
+      }
+
+      #sidebar {
+        background: #2d2d2d;
+        border-right: 1px solid #404040;
+      }
+
+      #search {
+        background: #3d3d3d;
+        color: #e0e0e0;
+        border-bottom: 1px solid #404040;
+      }
+
+      .chat-item {
+        border-bottom: 1px solid #404040;
+      }
+
+      .chat-item:hover {
+        background: #3d3d3d;
+      }
+
+      .chat-item.active {
+        background: #1e3a8a;
+        border-left: 3px solid #3b82f6;
+      }
+
+      .chat-title {
+        color: #e0e0e0;
+      }
+
+      .chat-date {
+        color: #9ca3af;
+      }
+
+      #header {
+        background: #2d2d2d;
+        border-bottom: 1px solid #404040;
+      }
+
+      #header-chat-title {
+        color: #e0e0e0;
+      }
+
+      .user {
+        background: #1e3a8a;
+        color: #e0e0e0;
+      }
+
+      .assistant {
+        background: #1e3a1e;
+        color: #e0e0e0;
+      }
+
+      .copy-btn {
+        background: rgba(45, 45, 45, 0.8);
+        border: 1px solid #555;
+        color: #e0e0e0;
+      }
+
+      .copy-btn:hover {
+        background: rgba(45, 45, 45, 1);
+      }
+
+      #empty-state {
+        color: #9ca3af;
+      }
+
+      .message blockquote {
+        border-left: 3px solid #555;
+        color: #9ca3af;
+      }
+
+      .message a {
+        color: #3b82f6;
+      }
+
+      .message hr {
+        border-top: 1px solid #404040;
+      }
+
+      /* Тёмная тема для кода */
+      .hljs {
+        background: #1e1e1e !important;
+        color: #d4d4d4 !important;
+      }
+    }
   </style>
 </head>
 
